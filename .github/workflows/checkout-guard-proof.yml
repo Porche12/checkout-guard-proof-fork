@@ -1,0 +1,30 @@
+name: checkout guard proof
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+
+jobs:
+  proof:
+    if: github.event.pull_request.head.repo.full_name == 'Porche12/checkout-guard-proof-fork'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the owned test branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}.git
+          ref: ${{ github.event.pull_request.head.ref }}
+          persist-credentials: true
+
+      - name: Run the marker proof from the checked-out branch
+        run: node proof.js
+
+      - name: Remove the temporary proof branch
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PROOF_BRANCH: checkout-guard-proof-${{ github.run_id }}
+        run: gh api --silent --method DELETE "/repos/${GITHUB_REPOSITORY}/git/refs/heads/${PROOF_BRANCH}" || true
